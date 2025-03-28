@@ -1,0 +1,93 @@
+﻿@* @page "/newsarticles/create" *@
+@* @using Microsoft.AspNetCore.Authorization *@
+@* @using Microsoft.AspNetCore.Components.Authorization *@
+@* @using Microsoft.AspNetCore.Mvc *@
+@* @using System.Security.Claims *@
+@* @using BO *@
+@* @using Repo *@
+@* @inject IUnitOfWork UnitOfWork *@
+@* @inject NavigationManager NavigationManager *@
+@* @inject AuthenticationStateProvider AuthStateProvider *@
+@* @attribute [Authorize(Roles = "1")] *@
+@* @attribute [IgnoreAntiforgeryToken] *@
+
+@* <PageTitle>Create</PageTitle> *@
+
+@* <h1>Create</h1> *@
+
+@* <h2>NewsArticle</h2> *@
+@* <hr /> *@
+@* <div class="row"> *@
+@*     <div class="col-md-4"> *@
+@*         <EditForm method="post" Model="NewsArticle" OnValidSubmit="AddNewsArticle" FormName="create" Enhance> *@
+@*             <DataAnnotationsValidator /> *@
+@*             <ValidationSummary class="text-danger" role="alert"/> *@
+@*             <div class="mb-3"> *@
+@*                 <label for="newstitle" class="form-label">NewsTitle:</label>  *@
+@*                 <InputText id="newstitle" @bind-Value="NewsArticle.NewsTitle" class="form-control" />  *@
+@*                 <ValidationMessage For="() => NewsArticle.NewsTitle" class="text-danger" />  *@
+@*             </div>         *@
+@*             <div class="mb-3"> *@
+@*                 <label for="headline" class="form-label">Headline:</label>  *@
+@*                 <InputText id="headline" @bind-Value="NewsArticle.Headline" class="form-control" />  *@
+@*                 <ValidationMessage For="() => NewsArticle.Headline" class="text-danger" />  *@
+@*             </div>            *@
+@*             <div class="mb-3"> *@
+@*                 <label for="newscontent" class="form-label">NewsContent:</label>  *@
+@*                 <InputText id="newscontent" @bind-Value="NewsArticle.NewsContent" class="form-control" />  *@
+@*                 <ValidationMessage For="() => NewsArticle.NewsContent" class="text-danger" />  *@
+@*             </div>         *@
+@*             <div class="mb-3"> *@
+@*                 <label for="newssource" class="form-label">NewsSource:</label>  *@
+@*                 <InputText id="newssource" @bind-Value="NewsArticle.NewsSource" class="form-control" />  *@
+@*                 <ValidationMessage For="() => NewsArticle.NewsSource" class="text-danger" />  *@
+@*             </div>         *@
+@*             <div class="mb-3"> *@
+@*                 <label for="categoryid" class="form-label">CategoryId:</label>  *@
+@*                 <InputNumber id="categoryid" @bind-Value="NewsArticle.CategoryId" class="form-control" />  *@
+@*                 <ValidationMessage For="() => NewsArticle.CategoryId" class="text-danger" />  *@
+@*             </div> *@
+@*             <div class="mb-3"> *@
+@*                 <label for="newsstatus" class="form-label">NewsStatus:</label>  *@
+@*                 <InputCheckbox id="newsstatus" @bind-Value="NewsArticle.NewsStatus" class="form-check-input" />  *@
+@*                 <ValidationMessage For="() => NewsArticle.NewsStatus" class="text-danger" />  *@
+@*             </div>      *@
+@*             <button type="submit" class="btn btn-primary">Create</button> *@
+@*         </EditForm> *@
+@*     </div> *@
+@* </div> *@
+
+@* <div> *@
+@*     <a href="/newsarticles">Back to List</a> *@
+@* </div> *@
+
+@* @code { *@
+@*     private NewsArticle NewsArticle { get; set; } = new(); *@
+@*     private string UserId { get; set; } *@
+
+@*     protected override async Task OnInitializedAsync() *@
+@*     { *@
+@*         var authState = await AuthStateProvider.GetAuthenticationStateAsync(); *@
+@*         var user = authState.User; *@
+@*         UserId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.PrimarySid)?.Value; *@
+@*     } *@
+
+@*     private async Task AddNewsArticle() *@
+@*     { *@
+@*         var maxId = (await UnitOfWork.GetRepository<NewsArticle>().GetAllAsync()) *@
+@*             .Select(a => int.TryParse(a.NewsArticleId, out int id) ? id : 0) *@
+@*             .DefaultIfEmpty(0) *@
+@*             .Max() + 1; *@
+
+@*         NewsArticle.NewsArticleId = maxId.ToString(); *@
+@*         NewsArticle.CreatedById = short.Parse(UserId); *@
+@*         NewsArticle.UpdatedById = short.Parse(UserId); *@
+@*         NewsArticle.CreatedDate = DateTime.Now; *@
+@*         NewsArticle.ModifiedDate = DateTime.Now; *@
+        
+@*         await UnitOfWork.GetRepository<NewsArticle>().InsertAsync(NewsArticle); *@
+@*         await UnitOfWork.SaveAsync(); *@
+
+@*         NavigationManager.NavigateTo("/newsarticles"); *@
+@*     } *@
+@* } *@

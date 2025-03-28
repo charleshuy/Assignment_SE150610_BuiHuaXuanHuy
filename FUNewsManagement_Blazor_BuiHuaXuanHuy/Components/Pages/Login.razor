@@ -1,0 +1,106 @@
+﻿@page "/login"
+@using BO
+@using Repo
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Antiforgery
+@inject IUnitOfWork UnitOfWork
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAntiforgery Antiforgery
+
+<PageTitle>Login</PageTitle>
+
+<div class="text-center">
+    <h2>Login Page</h2>
+    <EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="LoginForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Email:</label>
+            <InputText class="form-control" @bind-Value="loginModel.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Password:</label>
+            <InputText class="form-control" @bind-Value="loginModel.Password" type="password" />
+        </div>
+
+        <InputHidden Value="@GetAntiforgeryToken()" />
+
+        <button type="submit" class="btn btn-primary">Login</button>
+    </EditForm>
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <p class="text-danger">@ErrorMessage</p>
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    public HttpContext HttpContext { get; set; }
+
+    [SupplyParameterFromForm]
+    public LoginModel loginModel { get; set; } = new();
+    private string ErrorMessage = string.Empty;
+
+    private async Task HandleLogin()
+    {
+        if (loginModel == null || string.IsNullOrEmpty(loginModel.Email) || string.IsNullOrEmpty(loginModel.Password))
+        {
+            ErrorMessage = "Email or password is missing!";
+            return;
+        }
+
+        var user = UnitOfWork.GetRepository<SystemAccount>()
+                            .Entities
+                            .FirstOrDefault(u => u.AccountEmail == loginModel.Email && u.AccountPassword == loginModel.Password);
+
+        if (user == null)
+        {
+            ErrorMessage = "Invalid email or password!";
+            return;
+        }
+
+
+        // Create claims for the authenticated user
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, user.AccountEmail),
+            new Claim(ClaimTypes.NameIdentifier, user.AccountId.ToString()),
+            new Claim(ClaimTypes.Role, user.AccountRole.ToString())
+        };
+
+        var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+
+        // Sign in the user
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal);
+
+
+        // Redirect to the home page after successful login
+        Navigation.NavigateTo("/");
+
+    }
+
+    private string GetAntiforgeryToken()
+    {
+        var token = Antiforgery.GetAndStoreTokens(HttpContextAccessor.HttpContext).RequestToken;
+        return token ?? string.Empty;
+    }
+
+    public class LoginModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}
