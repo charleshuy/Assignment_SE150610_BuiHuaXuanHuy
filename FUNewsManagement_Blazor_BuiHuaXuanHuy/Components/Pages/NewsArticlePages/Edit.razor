@@ -1,4 +1,4 @@
-﻿@page "/newsarticles/create"
+﻿@page "/newsarticles/edit/{NewsArticleId:int}"
 @using Microsoft.AspNetCore.Components.Authorization
 @using BO
 @using Repo
@@ -7,19 +7,18 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>Create</PageTitle>
+<PageTitle>Edit News Article</PageTitle>
 
-<h1>Create</h1>
-
-<h2>NewsArticle</h2>
+<h1>Edit News Article</h1>
 <hr />
 <div class="row">
     <div class="col-md-4">
-        <EditForm method="post" Model="NewsArticle" OnValidSubmit="AddNewsArticle" FormName="create" Enhance>
+        <EditForm method="post" Model="NewsArticle" OnValidSubmit="UpdateNewsArticle" FormName="edit" Enhance>
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
+
             <div class="mb-3">
-                <label for="newstitle" class="form-label">NewsTitle:</label>
+                <label for="newstitle" class="form-label">News Title:</label>
                 <InputText id="newstitle" @bind-Value="NewsArticle.NewsTitle" class="form-control" />
                 <ValidationMessage For="() => NewsArticle.NewsTitle" class="text-danger" />
             </div>
@@ -29,31 +28,32 @@
                 <ValidationMessage For="() => NewsArticle.Headline" class="text-danger" />
             </div>
             <div class="mb-3">
-                <label for="createddate" class="form-label">CreatedDate:</label>
-                <InputDate id="createddate" @bind-Value="NewsArticle.CreatedDate" class="form-control" />
+                <label for="createddate" class="form-label">Created Date:</label>
+                <InputDate id="createddate" @bind-Value="NewsArticle.CreatedDate" class="form-control" disabled />
                 <ValidationMessage For="() => NewsArticle.CreatedDate" class="text-danger" />
             </div>
             <div class="mb-3">
-                <label for="newscontent" class="form-label">NewsContent:</label>
+                <label for="newscontent" class="form-label">News Content:</label>
                 <InputText id="newscontent" @bind-Value="NewsArticle.NewsContent" class="form-control" />
                 <ValidationMessage For="() => NewsArticle.NewsContent" class="text-danger" />
             </div>
             <div class="mb-3">
-                <label for="newssource" class="form-label">NewsSource:</label>
+                <label for="newssource" class="form-label">News Source:</label>
                 <InputText id="newssource" @bind-Value="NewsArticle.NewsSource" class="form-control" />
                 <ValidationMessage For="() => NewsArticle.NewsSource" class="text-danger" />
             </div>
             <div class="mb-3">
-                <label for="categoryid" class="form-label">CategoryId:</label>
+                <label for="categoryid" class="form-label">Category:</label>
                 <InputNumber id="categoryid" @bind-Value="NewsArticle.CategoryId" class="form-control" />
                 <ValidationMessage For="() => NewsArticle.CategoryId" class="text-danger" />
             </div>
             <div class="mb-3">
-                <label for="newsstatus" class="form-label">NewsStatus:</label>
+                <label for="newsstatus" class="form-label">News Status:</label>
                 <InputCheckbox id="newsstatus" @bind-Value="NewsArticle.NewsStatus" class="form-check-input" />
                 <ValidationMessage For="() => NewsArticle.NewsStatus" class="text-danger" />
             </div>
-            <button type="submit" class="btn btn-primary">Create</button>
+
+            <button type="submit" class="btn btn-primary">Save Changes</button>
         </EditForm>
     </div>
 </div>
@@ -66,14 +66,26 @@
     private NewsArticle NewsArticle { get; set; } = new();
     private string? UserId { get; set; }
 
+    [Parameter] public int NewsArticleId { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         UserId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.PrimarySid)?.Value;
+
+        if (NewsArticleId != 0)
+        {
+            var repository = UnitOfWork.GetRepository<NewsArticle>();
+            NewsArticle = await repository.GetByIdAsync(NewsArticleId);
+            if (NewsArticle == null)
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+        }
     }
 
-    private async Task AddNewsArticle()
+    private async Task UpdateNewsArticle()
     {
         if (UserId == null)
         {
@@ -81,11 +93,11 @@
             return;
         }
 
-        NewsArticle.CreatedById = short.Parse(UserId);
-        NewsArticle.CreatedDate = DateTime.UtcNow;
+        NewsArticle.UpdatedById = short.Parse(UserId);
+        NewsArticle.ModifiedDate = DateTime.UtcNow;
 
         var repository = UnitOfWork.GetRepository<NewsArticle>();
-        await repository.InsertAsync(NewsArticle);
+        repository.Update(NewsArticle);
         await UnitOfWork.SaveAsync();
 
         NavigationManager.NavigateTo("/newsarticles");

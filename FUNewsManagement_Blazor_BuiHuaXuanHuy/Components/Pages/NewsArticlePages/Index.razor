@@ -1,94 +1,50 @@
 ﻿@page "/newsarticles"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
-@using Microsoft.AspNetCore.Components.QuickGrid
 @using BO
 @using Repo
-@using System.Security.Claims
 @inject IUnitOfWork UnitOfWork
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @rendermode InteractiveServer
 
-<PageTitle>Index</PageTitle>
+<PageTitle>News Articles</PageTitle>
 
 <h1>News Articles</h1>
 
 <AuthorizeView Roles="1">
     <Authorized Context="authContext">
-        <a href="newsarticles/create">Create New</a>
+        <p>
+            <a href="newsarticles/create">Create New</a>
+        </p>
 
         <div class="w-100">
-            <EditForm Model="searchModel" OnValidSubmit="UpdateNewsArticles">
+            <EditForm method="post" Model="searchModel" OnValidSubmit="ApplySearchFilter" FormName="search-form" Enhance>
                 <InputText id="newstitle" @bind-Value="searchModel.SearchTerm" class="form-control" />
                 <button type="submit">Search</button>
             </EditForm>
         </div>
-
-        <h3>News History: </h3>
-        @if (NewsHistory != null && NewsHistory.Count > 0)
-        {
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Category</th>
-                        <th>Created Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var article in NewsHistory)
-                    {
-                        <tr>
-                            <td>@article.NewsTitle</td>
-                            <td>@article.Category?.CategoryDesciption</td>
-                            <td>@article.CreatedDate</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-        else
-        {
-            <p>No news articles found.</p>
-        }
     </Authorized>
 </AuthorizeView>
 
-<h3>News List: </h3>
 <table class="table">
     <thead>
         <tr>
             <th>News Title</th>
-            <th>Headline</th>
-            <th>Created Date</th>
-            <th>News Content</th>
-            <th>News Source</th>
             <th>Category</th>
-            <th>News Status</th>
-            <th>Created By</th>
-            <th>Updated By</th>
-            <th>Modified Date</th>
+            <th>Created Date</th>
             <th>Actions</th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var newsarticle in filteredNewsArticles)
+        @foreach (var newsarticle in FilteredNewsArticles)
         {
             <tr>
                 <td>@newsarticle.NewsTitle</td>
-                <td>@newsarticle.Headline</td>
-                <td>@newsarticle.CreatedDate</td>
-                <td>@newsarticle.NewsContent</td>
-                <td>@newsarticle.NewsSource</td>
                 <td>@newsarticle.Category?.CategoryName</td>
-                <td>@newsarticle.NewsStatus</td>
-                <td>@newsarticle.CreatedBy?.AccountName</td>
-                <td>@newsarticle.UpdatedById</td>
-                <td>@newsarticle.ModifiedDate</td>
+                <td>@newsarticle.CreatedDate</td>
                 <td>
                     <a href="@($"newsarticles/details?newsarticleid={newsarticle.NewsArticleId}")">Details</a>
-
                     <AuthorizeView Roles="1">
                         <Authorized>
                             | <a href="@($"newsarticles/edit?newsarticleid={newsarticle.NewsArticleId}")">Edit</a> |
@@ -102,58 +58,31 @@
 </table>
 
 @code {
-    private List<NewsArticle> newsArticles { get; set; } = new();
-    private List<NewsArticle> filteredNewsArticles { get; set; } = new();
-    private List<NewsArticle> NewsHistory { get; set; } = new();
-
+    private List<NewsArticle> NewsArticles { get; set; } = new();
+    private List<NewsArticle> FilteredNewsArticles { get; set; } = new();
     private SearchModel searchModel { get; set; } = new();
-    private string UserId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        UserId = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.PrimarySid)?.Value;
-
-        await LoadData();
+        var newsArticleRepo = UnitOfWork.GetRepository<NewsArticle>();
+        NewsArticles = (await newsArticleRepo.GetAllAsync()).ToList();
+        ApplySearchFilter();
     }
 
-    private async Task LoadData()
-    {
-        Console.WriteLine("Loading news articles...");
-
-        var newsRepo = UnitOfWork.GetRepository<NewsArticle>();
-
-        newsArticles = await newsRepo.Entities
-            .Include(n => n.Category)
-            .Include(n => n.CreatedBy)
-            .ToListAsync();
-
-        filteredNewsArticles = newsArticles.ToList();
-
-        NewsHistory = await newsRepo.Entities
-            .Where(n => n.CreatedById == short.Parse(UserId))
-            .Include(n => n.Category)
-            .ToListAsync();
-
-        Console.WriteLine($"Loaded {newsArticles.Count} articles.");
-        StateHasChanged();
-    }
-
-    private void UpdateNewsArticles()
+    private void ApplySearchFilter()
     {
         if (string.IsNullOrEmpty(searchModel.SearchTerm))
         {
-            filteredNewsArticles = newsArticles.ToList();
+            FilteredNewsArticles = NewsArticles.ToList();
         }
         else
         {
-            filteredNewsArticles = newsArticles
+            FilteredNewsArticles = NewsArticles
                 .Where(x => x.NewsTitle.Contains(searchModel.SearchTerm, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
     }
-    
+
     public class SearchModel
     {
         public string SearchTerm { get; set; } = string.Empty;

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Repo;
 using Microsoft.EntityFrameworkCore;
 using Repo.Services;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 
 namespace FUNewsManagement_Blazor_BuiHuaXuanHuy
 {
@@ -22,7 +23,9 @@ namespace FUNewsManagement_Blazor_BuiHuaXuanHuy
             builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<INewsService, NewsService>();
-
+            builder.Services.AddAuthorization();
+            builder.Services.AddCascadingAuthenticationState();
+            builder.Services.AddScoped<ProtectedSessionStorage>();
             // Add authentication
             builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(options =>

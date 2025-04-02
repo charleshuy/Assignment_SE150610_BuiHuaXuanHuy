@@ -1,4 +1,8 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">FUNewsManagement_Blazor_BuiHuaXuanHuy</a>
     </div>
@@ -13,11 +17,79 @@
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="newsarticles">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> News
-            </NavLink>
-        </div>
+
+        <AuthorizeView>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Login
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="newsarticles">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> News Articles
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="logout">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Logout
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="newsarticles">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> News Articles
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="1">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="categories">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Categories
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="0">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="systemaccounts">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> System Accounts
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="1">
+            <Authorized>
+                @if (!string.IsNullOrEmpty(userId))
+                {
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="@($"/systemaccounts/details?AccountId={userId}")">
+                            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Account's Profile
+                        </NavLink>
+                    </div>
+                }
+            </Authorized>
+        </AuthorizeView>
     </nav>
 </div>
+
+@code {
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        userId = user.FindFirst(ClaimTypes.PrimarySid)?.Value;
+    }
+}
 

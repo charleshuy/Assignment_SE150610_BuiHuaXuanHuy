@@ -1,0 +1,77 @@
+﻿@page "/systemaccounts/delete"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Mvc
+@using BO
+@using Repo
+
+@inject IUnitOfWork UnitOfWork
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize(Roles = "0")]
+@attribute [IgnoreAntiforgeryToken]
+
+<PageTitle>Delete</PageTitle>
+
+<h1>Delete</h1>
+
+<p>Are you sure you want to delete this?</p>
+<div>
+    <h2>SystemAccount</h2>
+    <hr />
+    @if (systemaccount is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <dl class="row">
+            <dt class="col-sm-2">AccountName</dt>
+            <dd class="col-sm-10">@systemaccount.AccountName</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">AccountEmail</dt>
+            <dd class="col-sm-10">@systemaccount.AccountEmail</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">AccountRole</dt>
+            <dd class="col-sm-10">@systemaccount.AccountRole</dd>
+        </dl>
+
+        <EditForm Model="systemaccount" OnValidSubmit="DeleteSystemAccount">
+            <button type="submit" class="btn btn-danger" disabled="@(systemaccount is null)">Delete</button> |
+            <a href="/systemaccounts">Back to List</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private SystemAccount? systemaccount;
+
+    [SupplyParameterFromQuery]
+    private string AccountId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (short.TryParse(AccountId, out short id))
+        {
+            var repository = UnitOfWork.GetRepository<SystemAccount>();
+            systemaccount = await repository.GetByIdAsync(id);
+        }
+
+        if (systemaccount is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    private async Task DeleteSystemAccount()
+    {
+        if (short.TryParse(AccountId, out short id))
+        {
+            var repository = UnitOfWork.GetRepository<SystemAccount>();
+            await repository.DeleteAsync(id);
+            await UnitOfWork.SaveAsync(); // Save changes to the database
+            NavigationManager.NavigateTo("/systemaccounts");
+        }
+    }
+}

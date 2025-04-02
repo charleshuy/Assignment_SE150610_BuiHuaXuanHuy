@@ -1,0 +1,93 @@
+﻿@page "/systemaccounts"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using BO
+@using Repo
+@inject IUnitOfWork UnitOfWork
+@inject NavigationManager NavManager
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "0")]
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<AuthorizeView Roles="0">
+    <Authorized Context="authContext">
+        <p>
+            <a href="systemaccounts/create">Create New</a>
+        </p>
+
+        <div class="w-100">
+            <EditForm method="post" Model="searchModel" OnValidSubmit="ApplySearchFilter" FormName="search-form" Enhance>
+                <InputText id="newstitle" @bind-Value="searchModel.SearchTerm" class="form-control" />
+                <button type="submit">Search</button>
+            </EditForm>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Account Name</th>
+            <th>Account Email</th>
+            <th>Account Role</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var systemaccount in FilteredAccounts)
+        {
+            <tr>
+                <td>@systemaccount.AccountName</td>
+                <td>@systemaccount.AccountEmail</td>
+                <td>@systemaccount.AccountRole</td>
+                <td>
+                    <a href="@($"systemaccounts/details?accountid={systemaccount.AccountId}")">Details</a>
+                    <AuthorizeView Roles="0">
+                        <Authorized>
+                            | <a href="@($"systemaccounts/edit?accountid={systemaccount.AccountId}")">Edit</a> |
+                            <a href="@($"systemaccounts/delete?accountid={systemaccount.AccountId}")">Delete</a>
+                        </Authorized>
+                        <NotAuthorized>
+                            | <a href="@($"systemaccounts/edit?accountid={systemaccount.AccountId}")">Edit</a>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<SystemAccount> SystemAccounts { get; set; } = new();
+    private List<SystemAccount> FilteredAccounts { get; set; } = new();
+    private SearchModel searchModel { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var repository = UnitOfWork.GetRepository<SystemAccount>();
+        SystemAccounts = (await repository.GetAllAsync()).ToList();
+        ApplySearchFilter();
+    }
+
+    private void ApplySearchFilter()
+    {
+        if (string.IsNullOrEmpty(searchModel.SearchTerm))
+        {
+            FilteredAccounts = SystemAccounts.ToList();
+        }
+        else
+        {
+            FilteredAccounts = SystemAccounts
+                .Where(x => x.AccountName.Contains(searchModel.SearchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    public class SearchModel
+    {
+        public string SearchTerm { get; set; } = string.Empty;
+    }
+}
